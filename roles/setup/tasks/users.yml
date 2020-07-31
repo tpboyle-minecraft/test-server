@@ -1,0 +1,66 @@
+---
+
+
+## BEELZEBUB - DESIGNATED SUDOER ##
+
+- name: bub group exists.
+  group:
+    state: present
+    name: bub
+
+- name: bub user (designated sudoer) exists.
+  user:
+    state: present
+    name: bub
+    group: bub
+    password: $6$pzfMVVmlzXzvGBQG$e69PWqIPf29sNLt8riS2a.z6mrt058uQL9ouliWVoDle2y5CWcpoAI5RQleTzr1t9lgoNZ0iI0hzJt7dxjP5e0
+    shell: /bin/bash
+
+- name: bub is a sudoer.
+  user:
+    state: present
+    name: bub
+    groups: sudo
+    append: yes
+
+
+## PATRICK ##
+
+- name: patrick group exists.
+  group:
+    state: present
+    name: patrick
+
+- name: patrick user exists.
+  user:
+    state: present
+    name: patrick
+    group: patrick
+    password: $6$W/PDq.zWaOVw/VkH$RPc7letDcPVhd/BuTwuQdWXVeChhgManHwkE/FxHCdJsBxIRAuK03L4YMJccMharCWUvgV07wzQx5301bpns6.
+    shell: /bin/bash
+
+- name: Getting patrick's groups...
+  become: yes
+  shell: groups patrick
+  register: patrick_groups
+
+- name: patrick is not a sudoer.
+  become: yes
+  command: "gpasswd -d patrick sudo"
+  when: patrick_groups is defined and 'sudo' in patrick_groups.stdout
+
+
+## QUINTON ##
+
+- name: quinton group exists.
+  group:
+    state: present
+    name: quinton
+
+- name: quinton user exists.
+  user:
+    state: present
+    name: quinton
+    group: quinton
+    password: $6$CTWC/TS4u7T$4MMK7TiVk20BwVdnEystaKj0xLh/uhcR2tdq0./FV.RalzgfmM2LySXrRrTvqx9OKBDMSfTTQfwCy3GjdiQyv.
+    shell: /bin/bash

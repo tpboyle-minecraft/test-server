@@ -1,0 +1,57 @@
+---
+# Global set up.
+
+
+- name: is this on Ubuntu/Debian?
+  set_fact: 
+    os_family: "Ubuntu/Debian"
+  when: ansible_distribution == "Ubuntu" or ansible_distribution == "Debian"
+
+- name: is this on RedHat/CentOS?
+  set_fact: 
+    os_family: "RedHat/CentOS"
+  when: ansible_distribution == "RedHat" or ansible_distribution == "CentOS"
+
+
+## 1) TIME ##
+
+- name: "timezone is accurate."
+  include_tasks: "timezone.yml"   # timezone must be correct for apt to work.
+
+
+## 2) UPDATE PACKAGES ##
+
+- name: "apt is fully updated."
+  include_tasks: "apt.yml"
+  when: os_family == 'Ubuntu/Debian'
+
+- name: "yum is fully updated."
+  include_tasks: "yum.yml"
+  when: os_family == 'RedHat/CentOS'
+
+
+## 3) SYSTEM ##
+
+- name: "ansible is installed and configured."
+  include_tasks: "ansible.yml"
+
+- name: "ntp is installed and configured."
+  include_tasks: "ntp.yml"
+
+- name: "sshd is installed and configured."
+  include_tasks: "sshd.yml"
+
+- name: "ClamAV is installed and configured."
+  include_tasks: "clamav.yml"
+
+- name: "git is installed and configured."
+  include_tasks: "git.yml"
+
+- name: "users are configured."
+  include_tasks: "users.yml"
+
+
+## 4) UTILITIES ##
+
+- name: "misc. utilities are installed."
+  include_tasks: "utilities.yml"

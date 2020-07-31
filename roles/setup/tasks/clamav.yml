@@ -1,0 +1,67 @@
+---
+
+## 1) DETERMINE IF IT'S INSTALLED.
+
+- name: Getting package_facts module ready...
+  package_facts:
+    manager: "auto"
+
+- name: Checking if ClamAV is installed...
+  set_fact:
+    fresh_install: true
+
+- name: Still checking if ClamAV is installed...
+  set_fact: 
+    fresh_install: false
+  when: "'clamav' in ansible_facts.packages"
+
+
+## 2) IT'S PRESENT AND UPDATED.
+
+- name: ClamAV is installed and up-to-date.
+  become: yes
+  apt:
+    state: latest
+    name: clamav
+
+
+## 3) RUN POST-INSTALLATION IF WE JUST INSTALLED IT THE FIRST TIME.
+
+- name: Stop ClamAV to update virus definitions.
+  become: yes
+  systemd:
+    state: stopped
+    name: clamav-freshclam
+  when: fresh_install
+
+- name: Virus definitions are updated.
+  become: yes
+  shell: freshclam
+  when: fresh_install
+
+- name: Restart ClamAV after updating virus definitions.
+  become: yes
+  systemd:
+    state: started
+    name: clamav-freshclam
+  when: fresh_install
+
+
+## 4) MAKE SURE CRON JOB IS SET TO RUN SCANS.
+
+- name: Regular ClamAV scans are scheduled for everything.
+  become: yes
+  cron:
+    state: present
+    name: "Full ClamAV scan"
+    weekday: "Mon,Wed,Fri"
+    hour: "4"
+    minute: "30"
+    job: > 
+      clamscan 
+      -i
+      -r
+      --max-scansize=4000M
+      --max-filesize=4000M
+      --log=/var/log/clamav/weekly-scan.log
+      /

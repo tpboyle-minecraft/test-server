@@ -1,0 +1,62 @@
+---
+
+
+##  INFRASTRUCTURE  ##
+
+- name: /etc/ssl/ and subdirectories exist.
+  become: yes
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  with_items:
+    - /etc/ssl/
+    - /etc/ssl/private
+    - /etc/ssl/public
+    - /etc/ssl/csr
+    - /etc/ssl/crt
+
+
+##  DHPARAM  ##
+
+- name: dhparam file exists.
+  stat:
+    path: /etc/ssl/dhparam.pem
+  register: stat_dhparam
+
+- name: Generate dhparam file if it doesn't exist.
+  shell: openssl dhparam -out /etc/ssl/dhparam.pem 2048
+  when: not stat_dhparam.stat.exists
+
+
+##  SELF-SIGNED CERTIFICATE  ##
+
+#  WE NEED TO CREATE A JANK CERTIFICATE AS A PLACEHOLDER 
+#   FOR NGINX TO BOOT WITH THE HTTPS CONFIGURATIONS WE HAVE.
+
+- name: The site has a certificate.
+  stat:
+    path: "/etc/ssl/crt/{{ website_name }}.crt"
+  register: stat_cert
+
+- name: Get a self-signed certificate so NGINX can boot.
+  include_tasks: self-signed.yml
+  when: not stat_cert.stat.exists
+
+- name: restart nginx.
+  service:
+    name: nginx
+    state: restarted
+
+
+##  LETSENCRYPT CERTIFICATE  ##
+
+# - name: LetsEncrypt SSL certificate exists.
+#   stat:
+#     path: "/etc/letsencrypt/live/{{ website_name }}/cert.pem"
+#   register: stat_cert
+
+# - name: Generate LetsEncrypt SSL certificate if missing.
+#   include_tasks: letsencrypt.yml
+#   when: not stat_cert.stat.exists
+

@@ -1,0 +1,9 @@
+---
+
+# must include vars:
+#   - mysql_root_password
+- include_vars: "mysql.yml"
+
+- name: Run mysql installation role.
+  import_role:
+    name: geerlingguy.mysql

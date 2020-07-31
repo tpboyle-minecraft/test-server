@@ -1,0 +1,18 @@
+---
+
+
+- name: Set path to website role for config and assets.
+  set_fact:
+    website_role_path: "{{ role_path }}"
+
+- name: Start nginx for "fuckyouquinton.com"
+  include_role:
+    name: nginx
+  vars:
+    default: no
+    website_name: "fuckyouquinton.com"
+    server_root: /var/www/fuckyouquinton.com
+    copy_content: yes
+    copy_config: yes
+    https_port: 61443
+    service_admin_email: t.patrick.boyle@gmail.com

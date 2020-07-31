@@ -1,0 +1,8 @@
+---
+
+- name: yum cache is up-to-date.
+  become: yes
+  yum:
+    update_cache: yes
+    # cache_valid_time: 7200
+    # upgrade: yes

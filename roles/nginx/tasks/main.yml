@@ -1,0 +1,137 @@
+---
+
+# assumes:
+#   - this role has been invoked with become: yes.
+
+# arguments:
+#   - website_name: used for the sites-available file, among other things
+#   - website_role_path: role path for website being initialized.
+#                          Needed for access to config and content files.
+#   - https_port: the port the internal server listens on.
+
+
+## VARIABLES ##
+
+- name: Set path to nginx role for default config and assets.
+  set_fact:
+    nginx_role_path: "{{ role_path }}"
+
+
+## DEPENDENCIES ##
+
+- name: nginx is installed.
+  package:
+    name: nginx
+    state: present
+
+
+## RHEL SETUP ##
+
+- name: Handle SELinux setup (RHEL only).
+  include_tasks: setup-rhel.yml
+  when: os_family == "RedHat/CentOS"
+
+
+## CREATE SITES-AVAILABLE/ENABLED ##
+
+- name: nginx/sites-available exists.
+  file:
+    path: /etc/nginx/sites-available
+    state: directory
+    mode: '0755'
+
+- name: nginx/sites-enabled exists.
+  file:
+    path: /etc/nginx/sites-enabled
+    state: directory
+    mode: '0755'
+
+
+## CONFIG ##
+
+- name: default site config file is disabled.
+  file:
+    state: absent
+    path: "/etc/nginx/sites-enabled/default"
+
+- name: site config files for website are present.
+  template:
+    src: "templates/site.conf.j2"
+    dest: "/etc/nginx/sites-available/{{ website_name }}"
+    owner: root
+    group: root
+    mode: 0755
+  when: copy_config
+
+- name: website's config is linked to in sites-enabled.
+  file:
+    state: link
+    src: "/etc/nginx/sites-available/{{ website_name }}"
+    dest: "/etc/nginx/sites-enabled/{{ website_name }}"
+    owner: root
+    group: root
+  when: copy_config
+
+- name: server tokens are hidden. (i.e. nginx version displayed on error pages)
+  lineinfile:
+    state: present
+    path: /etc/nginx/nginx.conf
+    regexp: 'server_tokens '
+    line: 'server_tokens off;'
+
+
+## CONTENT ##
+
+- name: website's content directory exists.
+  file:
+    state: directory
+    path: "{{ server_root }}"
+    owner: root
+    group: root
+    mode: 0755
+
+- name: website's content files have been copied from controller.
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: 0755
+  with_items:
+    - src: "{{ website_role_path }}/files/content/"
+      dest: "{{ server_root }}"
+  when: copy_content
+
+- name: website's content files are present with correct permissions.
+  file:
+    state: directory
+    path: "{{ server_root }}"
+    recurse: yes
+    owner: root
+    group: root
+    mode: 0755
+
+- name: website's content files have correct SELinux types (RHEL only).
+  become: yes
+  command: "chcon -R -t httpd_sys_content_t {{ server_root }}"
+  when: os_family == "RedHat/CentOS"
+
+
+## HTTPS ##
+
+- name: HTTPS has been set up.
+  include_tasks: https.yml
+
+
+## RESTART & END STATE
+
+- name: restart nginx.
+  service:
+    name: nginx
+    state: restarted
+
+- name: nginx is running and enabled on boot.
+  service:
+    name: nginx
+    state: started
+    enabled: yes

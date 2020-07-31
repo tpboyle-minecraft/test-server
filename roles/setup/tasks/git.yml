@@ -1,0 +1,26 @@
+
+# Assumes vars/git.yml has been loaded and the 
+#   vars <globals> and <aliases> are present.
+
+
+- name: git is installed.
+  package:
+    name: git
+    state: present
+
+- name: >
+    git config globals (incl. name and email) are correct.
+  git_config:
+    scope: global
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+  loop: "{{ globals }}"
+    
+- name: >
+    git aliases are as I fucking want them.
+  git_config:
+    scope: global
+    name: "alias.{{ item.short }}"
+    value: "{{ item.long }}"
+  loop: "{{ aliases }}"
+

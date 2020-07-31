@@ -1,0 +1,14 @@
+
+- globals:
+  - name: "user.name"
+    value: "Patrick Boyle"
+  - name: "user.email"
+    value: "t.patrick.boyle@gmail.com"
+
+- aliases:
+  - short: co
+    long: commit
+  - short: ch
+    long: checkout
+  - short: s
+    long: status

@@ -1,0 +1,12 @@
+---
+- name: Draw the fucking owl.
+  hosts: all
+  become: yes
+  vars_files:
+    - "vars/git.yml"
+  roles:
+    - setup
+    - fuckyouquinton.com
+
+    ## prereqs
+    # - minecraft   # gbwh user patrick must have logged in at least once.

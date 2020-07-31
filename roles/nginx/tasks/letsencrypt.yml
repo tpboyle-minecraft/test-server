@@ -1,0 +1,110 @@
+---
+
+##  LETSENCRYPT  ##
+
+- name: Install LetsEncrypt dependencies.
+  apt:
+    state: latest
+    name:
+      - python
+      - python-dev
+      - gcc
+      - dialog
+      - libaugeas0
+      - augeas-lenses
+      - libssl-dev
+      - libffi-dev
+      - ca-certificates
+      - python-pip
+      - python-virtualenv
+      - git
+      - libpython-dev
+      - zlib1g-dev
+      - openssl
+
+- name: Install LetsEncrypt client.
+  git:
+    clone: yes
+    force: yes
+    repo: https://github.com/certbot/certbot
+    dest: /opt/certbot
+
+- set_fact:
+    letsencrypt_install_shell: >
+      /opt/certbot/certbot-auto
+      certonly
+      --webroot
+      --email {{ service_admin_email }}
+      --agree-tos
+      --webroot-path={{ server_root }}
+      -d {{ website_name }}
+      -d www.{{ website_name }}
+    
+- name: Create LetsEncrypt certificate.
+  block:
+    - block:
+        - name: Attempt to get a real LetsEncrypt certificate.
+          shell: "{{ letsencrypt_install_shell }}"
+      rescue: 
+        - name: If we've reached our rate limit, get a test certificate at least.
+          shell: "{{ letsencrypt_install_shell }} --test-cert"
+    - set_fact: cert_created=true
+  rescue:
+    - set_fact: cert_created=false
+
+- name: Remove old private key and certificate.
+  file:
+    state: absent
+    path: "{{ item }}"
+  with_items:
+    - "/etc/ssl/private/{{ website_name }}.pem"
+    - "/etc/ssl/crt/{{ website_name }}.crt"
+  when: cert_created
+
+- name: Create symbolic links from LetsEncrypt stuff to /etc/ssl/.
+  file:
+    state: link
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+  with_items:
+    - src: "/etc/letsencrypt/live/{{ website_name }}/privkey.pem"
+      dest: "/etc/ssl/private/{{ website_name }}.pem"
+    - src: "/etc/letsencrypt/live/{{ website_name }}/cert.pem"
+      dest: "/etc/ssl/crt/{{ website_name }}.crt"
+  when: cert_created
+
+- name: restart nginx.
+  service:
+    name: nginx
+    state: restarted
+
+
+## cron ##
+
+- name: LetsEncrypt cert auto-renewal is scheduled.
+  cron:
+    state: present
+    name: "letsencrypt auto-renewal <{{ website_name }}>"
+    weekday: 1
+    hour: 4
+    minute: 30
+    job: > 
+      /opt/certbot/certbot-auto
+      certonly
+      --webroot
+      --email {{ service_admin_email }}
+      --agree-tos
+      --webroot-path={{ server_root }}
+      -d {{ website_name }}
+      -d www.{{ website_name }}
+
+- name: nginx is scheduled to restart after the cert is renewed.
+  cron:
+    state: present
+    name: "nginx post-letsencrypt restart"
+    weekday: 1
+    hour: 2
+    minute: 50
+    job: "systemctl restart nginx.service"

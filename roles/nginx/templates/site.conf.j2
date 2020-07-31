@@ -1,0 +1,63 @@
+
+## vars:
+##   - website_name
+##   - server_root
+##   - https_port
+
+
+## HTTP -> HTTPS REDIRECT ##
+
+server {
+    listen 80{% if default %} default{% endif %};
+    server_name {{ website_name }} *.{{ website_name }};
+
+    # LetsEncrypt
+    root {{ server_root }};
+    location ~ /.well-known {
+        allow all;
+    }
+
+    # Redirect
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+
+## REVERSE PROXY ##
+
+server {
+    listen 443 ssl{% if default %} default{% endif %};
+    listen [::]:443 ssl{% if default %} default{% endif %};
+
+    ssl_certificate /etc/ssl/crt/{{ website_name }}.crt;
+    ssl_certificate_key /etc/ssl/private/{{ website_name }}.pem;
+
+    server_name {{ website_name }} *.{{ website_name }};
+    location / {
+            proxy_pass https://127.0.0.1:{{ https_port }};
+    }
+}
+
+
+## WEB SERVER ##
+
+server {
+        listen {{ https_port }} ssl;
+        listen [::]:{{ https_port }} ssl;
+
+        ssl_certificate /etc/ssl/crt/{{ website_name }}.crt;
+        ssl_certificate_key /etc/ssl/private/{{ website_name }}.pem;
+        ssl_dhparam /etc/ssl/dhparam.pem;
+
+        server_name {{ website_name }};
+        root {{ server_root }};
+
+        index index.html index.htm;
+
+        location / {
+                # First attempt to serve request as file, then
+                # as directory, then fall back to displaying a 404.
+                try_files $uri $uri/ =404;
+        }
+}

@@ -1,0 +1,27 @@
+---
+# Ensure time is correctly.
+
+
+## INSTALLED ##
+
+- name: ntp is installed.
+  package: 
+    state: present
+    name: ntp
+
+
+## RUNNING ##
+
+- name: ntp is running.
+  service:
+    state: started
+    name: ntp
+    enabled: yes
+  when: os_family == "Ubuntu/Debian"
+
+- name: ntp is running.
+  service:
+    state: started
+    name: ntpd
+    enabled: yes
+  when: os_family == "RedHat/CentOS"

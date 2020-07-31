@@ -1,0 +1,25 @@
+# Install and ensure sshd is running.
+
+- name: sshd is installed.
+  package:
+    name: openssh-server
+    state: present
+
+- name: remote access & password authentication are turned on.
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  with_items:
+    - regexp: "Port "
+      line: "Port 22"
+    - regexp: "ListenAddress "
+      line: "ListenAddress 0.0.0.0"
+    - regexp: "PasswordAuthentication "
+      line: "PasswordAuthentication yes"
+
+- name: sshd is running.
+  service:
+    name: sshd
+    state: started
+    enabled: yes

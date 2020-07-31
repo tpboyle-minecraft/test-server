@@ -1,0 +1,38 @@
+
+# assumes:
+#   - this role has been invoked with become: yes.
+
+# 
+
+## SELINUX ##
+
+- name: locate an installation source for semanage.
+  become: yes
+  command: "yum provides /usr/sbin/semanage"
+
+- name: semanage is installed (RHEL only).
+  become: yes
+  yum:
+    state: present
+    name: 
+      - policycoreutils-python
+      - setroubleshoot
+      - setroubleshoot-server
+
+- name: requested ports have been opened on SELinux.
+  become: yes
+  seport:
+    ports: "{{ listen_http }}"
+    proto: tcp
+    setype: http_port_t
+    state: present
+
+## COPY OVER NGINX CONFIGURATION FILES (RHEL only).
+
+- name: custom nginx config for RHEL has been copied over.
+  copy:
+    src: "{{ nginx_role_path }}/files/config/nginx.conf.rhel"
+    dest: "/etc/nginx/nginx.conf"
+    owner: root
+    group: root
+    mode: '0755'

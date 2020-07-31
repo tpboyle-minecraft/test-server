@@ -1,0 +1,46 @@
+---
+
+##
+##  Not idempotent.
+##
+
+
+##  PUBLIC/PRIVATE KEYS  ##
+
+- name: The site has a public/private key pair.
+  become: yes
+  stat:
+    path: "/etc/ssl/private/{{ website_name }}.pem"
+  register: stat_key
+
+- name: Generate site's private key.
+  become: yes
+  openssl_privatekey:
+    path: "/etc/ssl/private/{{ website_name }}.pem"
+  when: not stat_key.stat.exists
+
+- name: Generate site's public key.
+  become: yes
+  openssl_publickey:
+    path: "/etc/ssl/public/{{ website_name }}.pem"
+    privatekey_path: "/etc/ssl/private/{{ website_name }}.pem"
+  when: not stat_key.stat.exists
+
+
+##  SELF-SIGNED CERTIFICATE  ##
+
+- name: Generate a CSR.
+  openssl_csr:
+    path: "/etc/ssl/csr/{{ website_name }}.csr"
+    privatekey_path: "/etc/ssl/private/{{ website_name }}.pem"
+    common_name: "{{ website_name }}"
+    backup: yes
+
+- name: Self-sign the CSR into a certificate.
+  openssl_certificate:
+    path: "/etc/ssl/crt/{{ website_name }}.crt"
+    privatekey_path: "/etc/ssl/private/{{ website_name }}.pem"
+    csr_path: "/etc/ssl/csr/{{ website_name }}.csr"
+    provider: selfsigned
+    backup: yes
+

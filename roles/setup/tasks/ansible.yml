@@ -1,0 +1,14 @@
+---
+
+- name: ansible repository is set up.
+  package:
+    state: present
+    name: 
+      - epel-release
+  when: os_family == 'RedHat/CentOS'
+
+- name: ansible and related tools are installed.
+  package:
+    state: present
+    name: 
+      - ansible
